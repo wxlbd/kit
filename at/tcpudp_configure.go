@@ -5,11 +5,6 @@ import (
 	"unsafe"
 )
 
-const (
-	TransferTCP = "TCP"
-	TransferUDP = "UDP"
-)
-
 type TransferProto string
 
 const (
@@ -18,6 +13,7 @@ const (
 )
 
 type SetTCPUDPServerCfgCommand interface {
+	Commander
 	SetTransferProto(transferMode TransferProto) SetTCPUDPServerCfgCommand
 	SetChannelNumber(channelNumber int) SetTCPUDPServerCfgCommand
 	SetAddress(address string) SetTCPUDPServerCfgCommand
@@ -91,6 +87,7 @@ const (
 )
 
 type SetRegisterPacketCfgCommand interface {
+	Commander
 	// SetRegisterMode 设置注册包模式
 	//
 	// 0 不启用注册包
@@ -120,7 +117,7 @@ type SetRegisterPacketCfgCommand interface {
 }
 
 func NewSetRegisterPacketCfgCommand() SetRegisterPacketCfgCommand {
-	return &setRegisterPacket{baseCommand: &baseCommand{Value: `"@DTU:0000:DTUID=%d,%d,%d,"%s",%d"`}, channelNumber: 1}
+	return &setRegisterPacket{baseCommand: &baseCommand{Value: `@DTU:0000:DTUID=%d,%d,%d,"%s",%d`}, channelNumber: 1}
 }
 
 type setRegisterPacket struct {
@@ -169,6 +166,7 @@ func (d *setRegisterPacket) Bytes() []byte {
 
 // SetHeartbeatCfgCommand 心跳配置
 type SetHeartbeatCfgCommand interface {
+	Commander
 	SetHeartbeatInterval(heartbeatInterval int) SetHeartbeatCfgCommand
 	SetDataFormat(dataFormat DataFormat) SetHeartbeatCfgCommand
 	SetDataContent(dataContent string) SetHeartbeatCfgCommand
@@ -225,6 +223,7 @@ func (h *heartbeatConfigure) Bytes() []byte {
 
 // SetHeartbeatAvoidanceCfgCommand 设置心跳避让配置
 type SetHeartbeatAvoidanceCfgCommand interface {
+	Commander
 	SetEnable(enable int) SetHeartbeatAvoidanceCfgCommand
 	SetChannelNumber(channelNumber int) SetHeartbeatAvoidanceCfgCommand
 }
@@ -257,8 +256,4 @@ func (h *setHeartbeatAvoidanceConfig) String() string {
 func (h *setHeartbeatAvoidanceConfig) Bytes() []byte {
 	s1 := h.String()
 	return unsafe.Slice(unsafe.StringData(s1), len(s1))
-}
-
-type readHeartbeatAvoidanceConfig struct {
-	*baseCommand
 }

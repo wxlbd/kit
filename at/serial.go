@@ -50,6 +50,7 @@ const (
 
 // SetSerialCommand 串口参数设置
 type SetSerialCommand interface {
+	Commander
 	SetBaudRate(baudRate BaudRate) SetSerialCommand
 	SetDataBits(dataBits DataBits) SetSerialCommand
 	SetStopBits(stopBits StopBits) SetSerialCommand

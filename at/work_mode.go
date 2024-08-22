@@ -5,9 +5,6 @@ import (
 	"unsafe"
 )
 
-// ReadWorkModeCommand 读取DTU工作模式
-var ReadWorkModeCommand = &readworkMode{baseCommand: &baseCommand{Value: "@DTU:0000:DTUMODE?"}}
-
 // SetWorkModeCommand DTU通道工作模式配置
 type SetWorkModeCommand interface {
 	Commander
@@ -69,8 +66,4 @@ func (w *setWorkMode) String() string {
 func (w *setWorkMode) Bytes() []byte {
 	s := w.String()
 	return unsafe.Slice(unsafe.StringData(s), len(s))
-}
-
-type readworkMode struct {
-	*baseCommand
 }

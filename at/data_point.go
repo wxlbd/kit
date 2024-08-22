@@ -83,13 +83,6 @@ func NewSetPollCommand() SetPollCommand {
 	}
 }
 
-// ReadPollCommand 读取轮询配置
-var ReadPollCommand = &readPoll{baseCommand: &baseCommand{Value: "@DTU:0000:POLL?"}}
-
-type readPoll struct {
-	*baseCommand
-}
-
 // NewSetPollStrCommand 轮询字串设置
 func NewSetPollStrCommand() SetPollStrCommand {
 	return &setPollStr{baseCommand: &baseCommand{Value: `@DTU:0000:POLLSTR=%d,%d,%d,"%s"`}}
@@ -150,14 +143,6 @@ func (p *setPollStr) String() string {
 func (p *setPollStr) Bytes() []byte {
 	s := p.String()
 	return unsafe.Slice(unsafe.StringData(s), len(s))
-}
-
-// ReadPollStrCommand 读取轮询字串配置
-var ReadPollStrCommand = &readPollStr{baseCommand: &baseCommand{Value: "@DTU:0000:POLLSTR?"}}
-
-type readPollStr struct {
-	*baseCommand
-	index int
 }
 
 // PollJsonCfgCommand 轮询JSON使能配置
