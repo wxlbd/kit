@@ -7,6 +7,7 @@ import (
 
 // SetMQTTServerCfgCommand  MQTT服务器配置
 type SetMQTTServerCfgCommand interface {
+	Commander
 	SetAddress(address string) SetMQTTServerCfgCommand
 	SetPort(port int) SetMQTTServerCfgCommand
 	SetChannelNumber(channelNumber int) SetMQTTServerCfgCommand
@@ -49,6 +50,7 @@ func (m *setMqttServerConfig) Bytes() []byte {
 
 // SetMQTTClientIDCfgCommand MQTT客户端ID配置
 type SetMQTTClientIDCfgCommand interface {
+	Commander
 	SetClientID(clientID string) SetMQTTClientIDCfgCommand
 	SetChannelNumber(channelNumber int) SetMQTTClientIDCfgCommand
 }
@@ -84,6 +86,7 @@ func (m *setMqttClientIDConfig) Bytes() []byte {
 
 // SetMQTTUserPwdCfgCommand MQTT用户名密码配置
 type SetMQTTUserPwdCfgCommand interface {
+	Commander
 	SetUsername(username string) SetMQTTUserPwdCfgCommand
 	SetPassword(password string) SetMQTTUserPwdCfgCommand
 	SetChannelNumber(channelNumber int) SetMQTTUserPwdCfgCommand
@@ -128,6 +131,7 @@ func (m *setMqttUserPwdConfig) Bytes() []byte {
 
 // SetMQTTAutoSubCfgCommand MQTT自动订阅配置
 type SetMQTTAutoSubCfgCommand interface {
+	Commander
 	SetEnable(enable int) SetMQTTAutoSubCfgCommand
 	SetTopic(topic string) SetMQTTAutoSubCfgCommand
 	SetQos(qos int) SetMQTTAutoSubCfgCommand
@@ -177,6 +181,7 @@ func (m *setMqttAutoSubConfig) Bytes() []byte {
 
 // SetMQTTAutoPubCfgCommand MQTT自动发布配置
 type SetMQTTAutoPubCfgCommand interface {
+	Commander
 	SetEnable(enable int) SetMQTTAutoPubCfgCommand
 	SetTopic(topic string) SetMQTTAutoPubCfgCommand
 	SetQos(qos int) SetMQTTAutoPubCfgCommand
