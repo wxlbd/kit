@@ -5,8 +5,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"strconv"
 
-	"github.com/howeyc/crc16"
+	"github.com/sigurn/crc16"
 )
 
 // 定义YModem协议中的控制字符
@@ -46,7 +47,7 @@ func NewFrame(seq byte, data []byte) (*Frame, error) {
 		padded = make([]byte, 1024)
 		copy(padded[:l], data)
 	}
-	crc := crc16.Checksum(padded, crc16.CCITTFalseTable)
+	crc := crc16.Checksum(padded, crc16.MakeTable(crc16.CRC16_XMODEM))
 	return &Frame{
 		start: start,
 		seq:   seq,
@@ -68,15 +69,13 @@ func (f *Frame) Bytes() []byte {
 }
 
 // BuildStartFrame 构造起始帧
-func BuildStartFrame(filename string, filesize uint16) (*Frame, error) {
-	startData := new(bytes.Buffer)
-	startData.WriteString(filename)
-	startData.WriteByte(0)
-	if err := binary.Write(startData, binary.BigEndian, filesize); err != nil {
-		return nil, err
-	}
-	startData.WriteByte(0)
-	frame, err := NewFrame(0, startData.Bytes())
+func BuildStartFrame(filename string, filesize int) (*Frame, error) {
+	bs := new(bytes.Buffer)
+	bs.WriteString(filename)
+	bs.WriteByte(0)
+	bs.WriteString(strconv.Itoa(filesize))
+	bs.WriteByte(0)
+	frame, err := NewFrame(0, bs.Bytes())
 	if err != nil {
 		return nil, err
 	}
