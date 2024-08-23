@@ -1,164 +1,88 @@
 package log
 
 import (
-	"context"
-	"fmt"
-	"github.com/go-kratos/kratos/v2/log"
-	"github.com/wxlbd/kit/log/handler"
-	"gorm.io/gorm/logger"
-	"io"
-	"log/slog"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
-	"runtime"
 	"time"
 )
 
-var (
-	_ logger.Interface = (*Logger)(nil) // gorm接口实现检查
-	_ log.Logger       = (*Logger)(nil) // kratos接口实现检查
-)
-
-type Options struct {
-	Level      slog.Level // 日志级别
-	Writer     io.Writer  // 日志输出
-	TimeFormat string     // 时间格式
-}
-
-type Option interface {
-	Apply(*Options)
-}
-
-type optionFunc func(*Options)
-
-func (f optionFunc) Apply(opts *Options) {
-	f(opts)
-}
-
-func WithLevel(level slog.Level) Option {
-	return optionFunc(func(opts *Options) {
-		opts.Level = level
-	})
-}
-
-func WithWriter(writer io.Writer) Option {
-	return optionFunc(func(opts *Options) {
-		opts.Writer = writer
-	})
-}
-
-func WithTimeFormat(format string) Option {
-	return optionFunc(func(opts *Options) {
-		opts.TimeFormat = format
-	})
-}
+const ctxLoggerKey = "zapLogger"
 
 type Logger struct {
-	*slog.Logger
-	*handler.Handler
+	*zap.Logger
 }
 
-var defaultOptions = Options{
-	Level:      slog.LevelInfo,
-	Writer:     os.Stdout,
-	TimeFormat: time.DateTime,
+func NewLog(conf *viper.Viper) *Logger {
+	// log address "out.log" User-defined
+	lp := conf.GetString("log.log_file_name")
+	lv := conf.GetString("log.log_level")
+	var level zapcore.Level
+	//debug<info<warn<error<fatal<panic
+	switch lv {
+	case "debug":
+		level = zap.DebugLevel
+	case "info":
+		level = zap.InfoLevel
+	case "warn":
+		level = zap.WarnLevel
+	case "error":
+		level = zap.ErrorLevel
+	default:
+		level = zap.InfoLevel
+	}
+	hook := lumberjack.Logger{
+		Filename:   lp,                             // Log file path
+		MaxSize:    conf.GetInt("log.max_size"),    // Maximum size unit for each log file: M
+		MaxBackups: conf.GetInt("log.max_backups"), // The maximum number of backups that can be saved for log files
+		MaxAge:     conf.GetInt("log.max_age"),     // Maximum number of days the file can be saved
+		Compress:   conf.GetBool("log.compress"),   // Compression or not
+	}
+
+	var encoder zapcore.Encoder
+	if conf.GetString("log.encoding") == "console" {
+		encoder = zapcore.NewConsoleEncoder(zapcore.EncoderConfig{
+			TimeKey:        "ts",
+			LevelKey:       "level",
+			NameKey:        "Logger",
+			CallerKey:      "caller",
+			MessageKey:     "msg",
+			StacktraceKey:  "stacktrace",
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    zapcore.LowercaseColorLevelEncoder,
+			EncodeTime:     timeEncoder,
+			EncodeDuration: zapcore.SecondsDurationEncoder,
+			EncodeCaller:   zapcore.FullCallerEncoder,
+		})
+	} else {
+		encoder = zapcore.NewJSONEncoder(zapcore.EncoderConfig{
+			TimeKey:        "ts",
+			LevelKey:       "level",
+			NameKey:        "logger",
+			CallerKey:      "caller",
+			FunctionKey:    zapcore.OmitKey,
+			MessageKey:     "msg",
+			StacktraceKey:  "stacktrace",
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    zapcore.LowercaseLevelEncoder,
+			EncodeTime:     zapcore.EpochTimeEncoder,
+			EncodeDuration: zapcore.SecondsDurationEncoder,
+			EncodeCaller:   zapcore.ShortCallerEncoder,
+		})
+	}
+	core := zapcore.NewCore(
+		encoder,
+		zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(&hook)), // Print to console and file
+		level,
+	)
+	if conf.GetString("env") != "prod" {
+		return &Logger{zap.New(core, zap.Development(), zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))}
+	}
+	return &Logger{zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))}
 }
 
-func NewLogger(opts ...Option) *Logger {
-	for _, opt := range opts {
-		opt.Apply(&defaultOptions)
-	}
-	h := handler.NewHandler(defaultOptions.Writer, &handler.Options{
-		TimeFormat: defaultOptions.TimeFormat,
-		Level:      defaultOptions.Level,
-	})
-	return &Logger{
-		Logger:  slog.New(h),
-		Handler: h,
-	}
-}
-
-func (h *Logger) Log(level log.Level, keyAndValues ...any) error {
-	var pcs [1]uintptr
-	runtime.Callers(4, pcs[:])
-	pc := pcs[0]
-	var r slog.Record
-	switch level {
-	case log.LevelDebug:
-		r = slog.NewRecord(time.Now(), slog.LevelDebug, "", pc)
-		r.Add(keyAndValues...)
-	case log.LevelInfo:
-		r = slog.NewRecord(time.Now(), slog.LevelInfo, "", pc)
-		r.Add(keyAndValues...)
-	case log.LevelWarn:
-		r = slog.NewRecord(time.Now(), slog.LevelWarn, "", pc)
-		r.Add(keyAndValues...)
-	case log.LevelError:
-		r = slog.NewRecord(time.Now(), slog.LevelError, "", pc)
-		r.Add(keyAndValues...)
-	case log.LevelFatal:
-		r = slog.NewRecord(time.Now(), slog.LevelError, "", pc)
-		r.Add(keyAndValues...)
-	}
-	return h.Handle(context.TODO(), r)
-}
-func (h *Logger) LogMode(_ logger.LogLevel) logger.Interface {
-	return h
-}
-
-func (h *Logger) Info(ctx context.Context, s string, i ...any) {
-	if h.Handler.Enabled(ctx, slog.LevelInfo) {
-		var pcs [1]uintptr
-		runtime.Callers(4, pcs[:])
-		pc := pcs[0]
-		r := slog.NewRecord(time.Now(), slog.LevelInfo, "", pc)
-		r.AddAttrs(slog.String("msg", s))
-		r.Add(i...)
-		_ = h.Handle(ctx, r)
-	}
-}
-
-func (h *Logger) Warn(ctx context.Context, s string, i ...interface{}) {
-	if h.Handler.Enabled(ctx, slog.LevelWarn) {
-		var pcs [1]uintptr
-		runtime.Callers(4, pcs[:])
-		pc := pcs[0]
-		r := slog.NewRecord(time.Now(), slog.LevelInfo, "", pc)
-		r.AddAttrs(slog.String("msg", s))
-		r.Add(i...)
-		_ = h.Handle(ctx, r)
-	}
-}
-
-func (h *Logger) Error(ctx context.Context, s string, i ...interface{}) {
-	if h.Handler.Enabled(ctx, slog.LevelError) {
-		var pcs [1]uintptr
-		runtime.Callers(4, pcs[:])
-		pc := pcs[0]
-		r := slog.NewRecord(time.Now(), slog.LevelInfo, "", pc)
-		r.AddAttrs(slog.String("msg", s))
-		r.Add(i...)
-		_ = h.Handle(ctx, r)
-	}
-}
-
-func (h *Logger) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
-	if h.Handler.Enabled(ctx, slog.LevelInfo) {
-		var pcs [1]uintptr
-		runtime.Callers(4, pcs[:])
-		pc := pcs[0]
-		r := slog.NewRecord(time.Now(), slog.LevelInfo, "", pc)
-		sql, rows := fc()
-		elapsed := time.Since(begin)
-		if err != nil {
-			r.AddAttrs(handler.Err(err))
-		}
-		// 只有rows不为-1时，才会记录sql
-		if rows != -1 {
-			r.AddAttrs(
-				slog.String("time", fmt.Sprintf("%.3fms", float64(elapsed.Nanoseconds())/1e6)),
-				slog.String("sql", sql),
-			)
-			_ = h.Handle(ctx, r)
-		}
-	}
+func timeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendString(t.Format(time.DateTime))
 }
