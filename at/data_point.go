@@ -348,3 +348,33 @@ const (
 	RegResponseDataByteOrderBADC
 	RegResponseDataByteOrderDCBA
 )
+
+// JsonReportCommand 配置 JSON 每组上报周期
+type JsonReportCommand interface {
+	Commander
+	// SetInterval 设置上报间隔
+	SetInterval(interval int) JsonReportCommand
+}
+
+type jsonReportCommand struct {
+	*baseCommand
+	interval int
+}
+
+func (j *jsonReportCommand) String() string {
+	return fmt.Sprintf(j.Value, j.interval)
+}
+
+func (j *jsonReportCommand) Bytes() []byte {
+	s := j.String()
+	return unsafe.Slice(unsafe.StringData(s), len(s))
+}
+
+func (j *jsonReportCommand) SetInterval(interval int) JsonReportCommand {
+	j.interval = interval
+	return j
+}
+
+func NewJsonReportCommand() JsonReportCommand {
+	return &jsonReportCommand{baseCommand: &baseCommand{Value: `@DTU:0000:JSONPUBTIME=%d`}}
+}
