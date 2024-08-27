@@ -22,6 +22,12 @@ func (s *powerOff) SetType(t CommandType) error {
 	return nil
 }
 
+var EnterConfigurationMode = &enterConfigurationMode{baseCommand: &baseCommand{Value: "@DTU:0000:+++"}}
+
+type enterConfigurationMode struct {
+	*baseCommand
+}
+
 // ReadSignal 读取信号
 var ReadSignal = &readSignal{baseCommand: &baseCommand{Value: "@DTU:0000:CSQ"}}
 
