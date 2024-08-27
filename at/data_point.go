@@ -315,7 +315,7 @@ func (p *pollJsonRegConfig) Bytes() []byte {
 
 func NewPollJsonRegConfig() PollJsonRegCfgCommand {
 	return &pollJsonRegConfig{
-		baseCommand: &baseCommand{Value: "@DTU:0000:REGCFG=%d,%d,%d,%d,0,%d,0,%d,%d,”%s”,%d,%d"},
+		baseCommand: &baseCommand{Value: `@DTU:0000:REGCFG=%d,%d,%d,%d,0,%d,0,%d,%d,"%s",%d,%d`},
 		interval:    500,
 	}
 }
