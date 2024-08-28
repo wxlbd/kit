@@ -73,7 +73,6 @@ func (p *setPollCommand) String() string {
 
 func (p *setPollCommand) Bytes() []byte {
 	s := p.String()
-	fmt.Println(s)
 	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
 
