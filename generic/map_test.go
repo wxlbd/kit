@@ -1,4 +1,4 @@
-package genericsyncmap
+package generic
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestThreadSafeMap(t *testing.T) {
-	m := Map[int, int]{}
+	m := SyncMap[int, int]{}
 	m.Store(1, 1)
 	val, ok := m.Load(1)
 	if !ok {
@@ -24,7 +24,7 @@ type Custom struct {
 }
 
 func TestThreadSafeMap2(t *testing.T) {
-	m := Map[string, Custom]{}
+	m := SyncMap[string, Custom]{}
 	m.Store("1", Custom{A: 1, B: true, C: "1"})
 	val, ok := m.Load("1")
 	if !ok {
