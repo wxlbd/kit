@@ -29,7 +29,11 @@ type Frame struct {
 	crc   uint16 // CRC16校验
 }
 
-var ErrDataTooLong = errors.New("data too long")
+var (
+	ErrDataTooLong = errors.New("data too long")
+	ErrNotAcked    = errors.New("not acked")
+	ErrNotPoll     = errors.New("can't receive POLL")
+)
 
 // NewFrame 构造数据帧
 func NewFrame(seq byte, data []byte) (*Frame, error) {
@@ -109,4 +113,90 @@ func BuildDataFrames(fileData []byte) ([]*Frame, error) {
 		seq++
 	}
 	return frames, nil
+}
+
+// Send 发送文件
+func Send(rw io.ReadWriter, filename string, fileData []byte) error {
+	buf := make([]byte, 1)
+	// 等待POLL
+	if _, err := rw.Read(buf); err != nil {
+		return err
+	}
+	if buf[0] == POLL {
+		// 发送起始帧
+		frame, err := BuildStartFrame(filename, len(fileData))
+		if err != nil {
+			return err
+		}
+		if _, err := rw.Write(frame.Bytes()); err != nil {
+			return err
+		}
+		if _, err := rw.Read(buf); err != nil {
+			return err
+		}
+		if buf[0] != ACK {
+			return ErrNotAcked
+		}
+		if _, err := rw.Read(buf); err != nil {
+			return err
+		}
+		if buf[0] != POLL {
+			return ErrNotPoll
+		}
+		// 发送数据帧
+		frames, err := BuildDataFrames(fileData)
+		if err != nil {
+			return err
+		}
+		for _, frame := range frames {
+			if err := sendWithAck(rw, frame.Bytes()); err != nil {
+				return err
+			}
+		}
+		// 发送结束帧
+		frame, err = BuildEndFrame()
+		if err != nil {
+			return err
+		}
+		if _, err := rw.Write(frame.Bytes()); err != nil {
+			return err
+		}
+		if _, err := rw.Read(buf); err != nil {
+			return err
+		}
+		if buf[0] != NAK {
+			return errors.New("not NAK")
+		}
+		if err := sendWithAck(rw, frame.Bytes()); err != nil {
+			return err
+		}
+		if _, err := rw.Read(buf); err != nil {
+			return err
+		}
+		if buf[0] != POLL {
+			return ErrNotPoll
+		}
+	}
+	return nil
+}
+
+// 发送数据帧并等待ACK
+func sendWithAck(rw io.ReadWriter, data []byte) error {
+ReSend:
+	_, err := rw.Write(data)
+	if err != nil {
+		return err
+	}
+	buf := make([]byte, 1)
+	_, err = rw.Read(buf)
+	if err != nil {
+		return err
+	}
+	if buf[0] == NAK {
+		goto ReSend
+	}
+	if buf[0] != ACK {
+		return ErrNotAcked
+	}
+	return nil
 }
