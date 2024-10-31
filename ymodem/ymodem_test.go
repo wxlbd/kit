@@ -25,17 +25,20 @@ func TestSend(t *testing.T) {
 		return
 	}
 	defer port.Close()
-	fileInfo, err := os.Stat("/Users/wangxinlong/Downloads/N32_RTOS_WK_202410300913.bin")
+	fileInfo, err := os.Stat("/Users/wxl/Downloads/N32_RTOS_WK_202410300913.bin")
 	if err != nil {
 		t.Fatal("open file error", err)
 		return
 	}
-	data, err := os.ReadFile("/Users/wangxinlong/Downloads/N32_RTOS_WK_202410300913.bin")
+	data, err := os.ReadFile("/Users/wxl/Downloads/N32_RTOS_WK_202410300913.bin")
 	if err != nil {
 		t.Fatal("open file error", err)
 		return
 	}
-	// port.Write([]byte("01060130000149F9"))
+	if _, err := port.Write([]byte{0x72, 0x62, 0x20, 0x2D, 0x45, 0x0D, 0x0A}); err != nil {
+		t.Fatal(err)
+		return
+	}
 	err = Send(port, fileInfo.Name(), data)
 	if err != nil {
 		t.Fatal(err)

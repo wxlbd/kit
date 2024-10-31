@@ -148,17 +148,12 @@ func Send(rw io.ReadWriter, filename string, fileData []byte) error {
 		if err != nil {
 			return err
 		}
-		for _, frame := range frames {
+		for i, frame := range frames {
 			if err := sendWithAck(rw, frame.Bytes()); err != nil {
 				return err
 			}
 		}
-		// 发送结束帧
-		frame, err = BuildEndFrame()
-		if err != nil {
-			return err
-		}
-		if _, err := rw.Write(frame.Bytes()); err != nil {
+		if _, err := rw.Write([]byte{EOT}); err != nil {
 			return err
 		}
 		if _, err := rw.Read(buf); err != nil {
@@ -167,7 +162,8 @@ func Send(rw io.ReadWriter, filename string, fileData []byte) error {
 		if buf[0] != NAK {
 			return errors.New("not NAK")
 		}
-		if err := sendWithAck(rw, frame.Bytes()); err != nil {
+		// 第二次发送结束帧
+		if err := sendWithAck(rw, []byte{EOT}); err != nil {
 			return err
 		}
 		if _, err := rw.Read(buf); err != nil {
