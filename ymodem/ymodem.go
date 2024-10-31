@@ -148,7 +148,7 @@ func Send(rw io.ReadWriter, filename string, fileData []byte) error {
 		if err != nil {
 			return err
 		}
-		for i, frame := range frames {
+		for _, frame := range frames {
 			if err := sendWithAck(rw, frame.Bytes()); err != nil {
 				return err
 			}
