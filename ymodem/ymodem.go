@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"github.com/schollz/progressbar/v3"
 	"io"
 	"strconv"
 
@@ -123,6 +124,12 @@ func Send(rw io.ReadWriter, filename string, fileData []byte) error {
 		return err
 	}
 	if buf[0] == POLL {
+		// 数据帧
+		frames, err := BuildDataFrames(fileData)
+		if err != nil {
+			return err
+		}
+		bar := progressbar.Default(int64(len(frames)) + 1)
 		// 发送起始帧
 		frame, err := BuildStartFrame(filename, len(fileData))
 		if err != nil {
@@ -143,15 +150,12 @@ func Send(rw io.ReadWriter, filename string, fileData []byte) error {
 		if buf[0] != POLL {
 			return ErrNotPoll
 		}
-		// 发送数据帧
-		frames, err := BuildDataFrames(fileData)
-		if err != nil {
-			return err
-		}
+		_ = bar.Add(1)
 		for _, frame := range frames {
 			if err := sendWithAck(rw, frame.Bytes()); err != nil {
 				return err
 			}
+			_ = bar.Add(1)
 		}
 		if _, err := rw.Write([]byte{EOT}); err != nil {
 			return err

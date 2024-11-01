@@ -2,8 +2,10 @@ package ymodem
 
 import (
 	"fmt"
+	"github.com/schollz/progressbar/v3"
 	"os"
 	"testing"
+	"time"
 
 	"go.bug.st/serial"
 )
@@ -43,5 +45,13 @@ func TestSend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 		return
+	}
+}
+
+func TestBar(t *testing.T) {
+	bar := progressbar.Default(100)
+	for i := 0; i < 100; i++ {
+		bar.Add(1)
+		time.Sleep(40 * time.Millisecond)
 	}
 }
