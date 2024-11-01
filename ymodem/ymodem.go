@@ -129,7 +129,7 @@ func Send(rw io.ReadWriter, filename string, fileData []byte) error {
 		if err != nil {
 			return err
 		}
-		bar := progressbar.Default(int64(len(frames)) + 1)
+		bar := progressbar.Default(int64(len(frames)) + 3)
 		// 发送起始帧
 		frame, err := BuildStartFrame(filename, len(fileData))
 		if err != nil {
@@ -166,6 +166,7 @@ func Send(rw io.ReadWriter, filename string, fileData []byte) error {
 		if buf[0] != NAK {
 			return errors.New("not NAK")
 		}
+		_ = bar.Add(1)
 		// 第二次发送结束帧
 		if err := sendWithAck(rw, []byte{EOT}); err != nil {
 			return err
@@ -176,6 +177,7 @@ func Send(rw io.ReadWriter, filename string, fileData []byte) error {
 		if buf[0] != POLL {
 			return ErrNotPoll
 		}
+		_ = bar.Add(1)
 	}
 	return nil
 }
