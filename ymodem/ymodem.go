@@ -121,61 +121,76 @@ func BuildDataFrames(fileData []byte) ([]*Frame, error) {
 func Send(rw io.ReadWriter, filename string, fileData []byte) error {
 	buf := make([]byte, 1)
 	// 等待POLL
-	if _, err := rw.Read(buf); err != nil {
+	n, err := io.ReadAtLeast(rw, buf, 1)
+	if err != nil {
 		return err
 	}
+	fmt.Println(n)
 	if buf[0] == POLL {
 		// 数据帧
 		frames, err := BuildDataFrames(fileData)
 		if err != nil {
+			_, _ = rw.Write([]byte{CAN})
 			return err
 		}
 		bar := progressbar.Default(int64(len(frames)) + 3)
 		// 发送起始帧
 		frame, err := BuildStartFrame(filename, len(fileData))
 		if err != nil {
+			_, _ = rw.Write([]byte{CAN})
 			return err
 		}
 		if _, err := rw.Write(frame.Bytes()); err != nil {
+			_, _ = rw.Write([]byte{CAN})
 			return err
 		}
-		if _, err := rw.Read(buf); err != nil {
+		if _, err := io.ReadAtLeast(rw, buf, 1); err != nil {
+			_, _ = rw.Write([]byte{CAN})
 			return err
 		}
 		if buf[0] != ACK {
+			_, _ = rw.Write([]byte{CAN})
 			return ErrNotAcked
 		}
-		if _, err := rw.Read(buf); err != nil {
+		if _, err := io.ReadAtLeast(rw, buf, 1); err != nil {
+			_, _ = rw.Write([]byte{CAN})
 			return err
 		}
 		if buf[0] != POLL {
+			_, _ = rw.Write([]byte{CAN})
 			return ErrNotPoll
 		}
 		_ = bar.Add(1)
 		for _, frame := range frames {
 			if err := sendWithAck(rw, frame.Bytes()); err != nil {
+				_, _ = rw.Write([]byte{CAN})
 				return err
 			}
 			_ = bar.Add(1)
 		}
 		if _, err := rw.Write([]byte{EOT}); err != nil {
+			_, _ = rw.Write([]byte{CAN})
 			return err
 		}
-		if _, err := rw.Read(buf); err != nil {
+		if _, err := io.ReadAtLeast(rw, buf, 1); err != nil {
 			return err
 		}
 		if buf[0] != NAK {
+			_, _ = rw.Write([]byte{CAN})
 			return errors.New("not NAK")
 		}
 		_ = bar.Add(1)
 		// 第二次发送结束帧
 		if err := sendWithAck(rw, []byte{EOT}); err != nil {
+			_, _ = rw.Write([]byte{CAN})
 			return err
 		}
-		if _, err := rw.Read(buf); err != nil {
+		if _, err := io.ReadAtLeast(rw, buf, 1); err != nil {
+			_, _ = rw.Write([]byte{CAN})
 			return err
 		}
 		if buf[0] != POLL {
+			_, _ = rw.Write([]byte{CAN})
 			return ErrNotPoll
 		}
 		_ = bar.Add(1)
@@ -191,11 +206,9 @@ ReSend:
 		return err
 	}
 	buf := make([]byte, 1)
-	n, err := rw.Read(buf)
-	if err != nil {
+	if _, err := io.ReadAtLeast(rw, buf, 1); err != nil {
 		return err
 	}
-	fmt.Println(n)
 	if buf[0] == NAK {
 		goto ReSend
 	}
