@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"github.com/schollz/progressbar/v3"
 	"io"
 	"strconv"
@@ -190,10 +191,11 @@ ReSend:
 		return err
 	}
 	buf := make([]byte, 1)
-	_, err = rw.Read(buf)
+	n, err := rw.Read(buf)
 	if err != nil {
 		return err
 	}
+	fmt.Println(n)
 	if buf[0] == NAK {
 		goto ReSend
 	}
