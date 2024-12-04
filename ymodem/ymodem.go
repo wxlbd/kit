@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"github.com/schollz/progressbar/v3"
 	"io"
 	"strconv"
@@ -121,11 +120,10 @@ func BuildDataFrames(fileData []byte) ([]*Frame, error) {
 func Send(rw io.ReadWriter, filename string, fileData []byte) error {
 	buf := make([]byte, 1)
 	// 等待POLL
-	n, err := io.ReadAtLeast(rw, buf, 1)
+	_, err := io.ReadAtLeast(rw, buf, 1)
 	if err != nil {
 		return err
 	}
-	fmt.Println(n)
 	if buf[0] == POLL {
 		// 数据帧
 		frames, err := BuildDataFrames(fileData)
